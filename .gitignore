@@ -1,0 +1,32 @@
+# Cursor specific
+.cursorrules
+
+# Python virtual environment
+.venv/
+env/
+venv/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Local development settings
+.env
+
+# IDE settings
+.vscode/
+.idea/
+
+# Project-specific directories
+input_videos/*
+output_audio/*
+transcripts/*
+!input_videos/.gitkeep
+!output_audio/.gitkeep
+!transcripts/.gitkeep 

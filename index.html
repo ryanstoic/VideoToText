@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video to Text Converter</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+</head>
+<body class="min-h-screen bg-base-300">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-primary mb-8 text-center">Video to Text Converter</h1>
+        
+        <!-- Directory Input -->
+        <div class="card bg-base-100 shadow-xl mb-8">
+            <div class="card-body">
+                <h2 class="card-title text-accent">Select Directory</h2>
+                <input type="text" id="directoryPath" placeholder="Enter directory path" class="input input-bordered w-full" />
+                <div class="card-actions justify-end">
+                    <button onclick="processDirectory()" class="btn btn-primary">Process Videos</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Progress Section (Hidden by default) -->
+        <div id="progressSection" class="card bg-base-100 shadow-xl hidden">
+            <div class="card-body">
+                <h2 class="card-title text-accent mb-4">Processing Videos</h2>
+                
+                <!-- Current File -->
+                <div class="mb-4">
+                    <p id="currentFile" class="text-info"></p>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="w-full bg-base-200 rounded-full h-2.5 mb-4 relative">
+                    <div id="progressBar" class="bg-primary h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    <div id="progressText" class="absolute right-0 -top-6 text-sm text-base-content opacity-70"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Message Box -->
+        <div id="messageBox" class="alert mt-4 hidden">
+            <span id="messageText"></span>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        
+        function showMessage(message, type) {
+            const messageBox = document.getElementById('messageBox');
+            const messageText = document.getElementById('messageText');
+            messageBox.className = `alert ${type === 'error' ? 'alert-error' : 'alert-success'} mt-4`;
+            messageText.textContent = message;
+            messageBox.classList.remove('hidden');
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 5000);
+        }
+        
+        function resetUI() {
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('progressText').textContent = '';
+            document.getElementById('currentFile').textContent = '';
+            document.getElementById('progressSection').classList.add('hidden');
+        }
+        
+        function processDirectory() {
+            const directoryPath = document.getElementById('directoryPath').value;
+            if (!directoryPath) {
+                showMessage('Please enter a directory path', 'error');
+                return;
+            }
+            
+            // Reset UI
+            resetUI();
+            
+            // Show progress section
+            document.getElementById('progressSection').classList.remove('hidden');
+            
+            // Connect WebSocket
+            ws = new WebSocket('ws://localhost:8000/ws');
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                // Update progress bar
+                document.getElementById('progressBar').style.width = `${data.progress}%`;
+                document.getElementById('progressText').textContent = `${data.progress}%`;
+                
+                // Update current file
+                if (data.current_file) {
+                    document.getElementById('currentFile').textContent = `Processing: ${data.current_file}`;
+                }
+                
+                // Handle completion
+                if (data.status === 'completed') {
+                    showMessage('All videos processed successfully!', 'success');
+                    resetUI();
+                    ws.close();
+                }
+                
+                // Handle errors
+                if (data.status === 'error') {
+                    showMessage(data.error, 'error');
+                    resetUI();
+                    ws.close();
+                }
+            };
+            
+            ws.onopen = function() {
+                ws.send(JSON.stringify({
+                    action: 'process',
+                    directory: directoryPath
+                }));
+            };
+            
+            ws.onerror = function(error) {
+                showMessage('WebSocket error occurred', 'error');
+                resetUI();
+            };
+        }
+    </script>
+</body>
+</html> 
